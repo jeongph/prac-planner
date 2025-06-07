@@ -87,13 +87,16 @@ function generateTable() {
 
 function onMouseDown(e) {
   const cell = e.currentTarget;
-  if (cell.textContent) {
-    const all = Array.from(document.querySelectorAll('td'));
+  const all = Array.from(document.querySelectorAll('td'));
+  const defaultBg = 'rgb(236, 253, 245)';
+  const cellBg = window.getComputedStyle(cell).backgroundColor;
+  if (cellBg !== defaultBg) {
     let idx = all.indexOf(cell);
-    while (idx > 0 && all[idx-1].textContent === '') idx--;
+    while (idx > 0 && window.getComputedStyle(all[idx-1]).backgroundColor === cellBg) idx--;
     const block = [all[idx]];
-    for (let i = idx+1; i < all.length; i++) {
-      if (all[i].textContent === '') block.push(all[i]); else break;
+    for (let i = idx + 1; i < all.length; i++) {
+      if (window.getComputedStyle(all[i]).backgroundColor === cellBg) block.push(all[i]);
+      else break;
     }
     selectedCells = block;
     showModal();
@@ -113,8 +116,9 @@ function onMouseOver(e) {
   const all = Array.from(document.querySelectorAll('td'));
   const i1 = all.indexOf(startCell), i2 = all.indexOf(cell);
   const [min, max] = [Math.min(i1,i2), Math.max(i1,i2)];
-  selectedCells = all.slice(min, max+1);
+  const cells = all.slice(min, max+1);
   clearSelection();
+  selectedCells = cells;
   selectedCells.forEach(c => c.classList.add('highlight'));
   showPreview(e);
 }
@@ -179,7 +183,9 @@ function removeTask() {
   let idx = all.indexOf(selectedCells[0]);
   while(idx>0 && all[idx-1].style.backgroundColor === selectedColor) idx--;
   while(idx<all.length && all[idx].style.backgroundColor === selectedColor) {
-    all[idx].textContent = ''; all[idx].style.backgroundColor = '#ecfdf5'; idx++;
+    all[idx].textContent = '';
+    all[idx].style.backgroundColor = '#ecfdf5';
+    idx++;
   }
   clearSelection(); selectedCells = [];
   closeModal();
