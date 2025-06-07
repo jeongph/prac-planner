@@ -5,13 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>5분 단위 플래너</title>
   <style>
-    .table-container { overflow-x: auto; }
-    td { white-space: pre-wrap; word-break: break-word; }
-    @media (max-width: 600px) {
-      .table-container table { min-width: 720px; }
-      th, td { white-space: nowrap; }
-    }
-    body { font-family: sans-serif; margin: 20px; background: #f9f9f9; }
     td { white-space: pre-wrap; }
     body { font-family: sans-serif; margin: 20px; background: #f9f9f9; }
     h1 { text-align: center; margin-bottom: 10px; }
@@ -21,7 +14,7 @@
     td { cursor: pointer; }
     .highlight { background: #bbf7d0 !important; }
     .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 5; }
-    .modal { display: none; position: fixed; top: 30%; left: 50%; transform: translate(-50%, -30%); background: white; width: 260px; padding: 10px; box-shadow: 0 0 6px rgba(0,0,0,0.2); z-index: 10; }
+    .modal { display: none; position: fixed; top: 30%; left: 50%; transform: translate(-50%, -30%); width: 260px; background: white; padding: 10px; box-shadow: 0 0 6px rgba(0,0,0,0.2); z-index: 10; }
     .palette { display: flex; gap: 5px; margin: 8px 0; justify-content: center; }
     .color-swatch { width: 20px; height: 20px; border: 1px solid #aaa; cursor: pointer; }
     .color-preview { width: 20px; height: 20px; border: 2px solid black; margin-left: 8px; }
@@ -34,7 +27,7 @@
 <body>
   <h1>5분 단위 플래너</h1>
   <div style="text-align:center; margin-bottom:10px;"><button onclick="clearAll()">전체 삭제</button></div>
-  <div class="table-container"><table>
+  <table>
     <thead>
       <tr>
         <th>시간</th>
@@ -43,7 +36,7 @@
       </tr>
     </thead>
     <tbody id="plannerBody"></tbody>
-  </table></div>
+  </table>
   <div class="overlay" id="overlay"></div>
   <div class="modal" id="modal">
     <label for="taskText">할 일</label>
