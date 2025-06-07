@@ -13,14 +13,14 @@
     th { background: #eee; }
     td { cursor: pointer; }
     .highlight { background: #bbf7d0 !important; }
-    .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 5; }
-    .modal { display: none; position: fixed; top: 30%; left: 50%; transform: translate(-50%, -30%); background: white; width: 260px; padding: 10px; box-shadow: 0 0 6px rgba(0,0,0,0.2); z-index: 10; }
+    .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); }
+    .modal { display: none; position: fixed; top: 30%; left: 50%; transform: translate(-50%, -30%); background: white; width: 260px; padding: 10px; box-shadow: 0 0 6px rgba(0,0,0,0.2); }
     .palette { display: flex; gap: 5px; margin: 8px 0; justify-content: center; }
     .color-swatch { width: 20px; height: 20px; border: 1px solid #aaa; cursor: pointer; }
     .color-preview { width: 20px; height: 20px; border: 2px solid black; margin-left: 8px; }
-    .modal-buttons { display: flex; justify-content: space-between; margin-top: 8px; }
+    .modal-buttons { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
     .modal-buttons button { padding: 4px 6px; font-size: 12px; }
-    #timePreview { position: absolute; display: none; background: #fff; border: 1px solid #ccc; padding: 2px 6px; font-size: 12px; z-index: 15; }
+    #timePreview { position: absolute; display: none; background: #fff; border: 1px solid #ccc; padding: 2px 6px; font-size: 12px; }
     textarea { width: 100%; height: 40px; resize: vertical; font-size: 12px; }
   </style>
 </head>
@@ -29,13 +29,15 @@
   <div style="text-align:center; margin-bottom:10px;"><button onclick="clearAll()">전체 삭제</button></div>
   <table>
     <thead>
-      <tr><th>시간</th>
+      <tr>
+        <th>시간</th>
         <th>5분</th><th>10분</th><th>15분</th><th>20분</th><th>25분</th><th>30분</th>
         <th>35분</th><th>40분</th><th>45분</th><th>50분</th><th>55분</th><th>60분</th>
       </tr>
     </thead>
     <tbody id="plannerBody"></tbody>
   </table>
+
   <div class="overlay" id="overlay"></div>
   <div class="modal" id="modal">
     <label for="taskText">할 일</label>
@@ -55,152 +57,161 @@
       <button id="deleteBtn" onclick="removeTask()" style="display:none;">삭제</button>
     </div>
   </div>
+
   <div id="timePreview"></div>
-<script>
-let selectedCells = [];
-let startCell = null;
-let isDragging = false;
-let selectedColor = '#fde68a';
+  <script>
+    let selectedCells = [];
+    let startCell = null;
+    let isDragging = false;
+    let selectedColor = '#fde68a';
 
-const modal = document.getElementById('modal');
-const overlay = document.getElementById('overlay');
-const taskText = document.getElementById('taskText');
-const deleteBtn = document.getElementById('deleteBtn');
-const timePreview = document.getElementById('timePreview');
+    const modal = document.getElementById('modal');
+    const overlay = document.getElementById('overlay');
+    const taskText = document.getElementById('taskText');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const timePreview = document.getElementById('timePreview');
 
-function generateTable() {
-  const tbody = document.getElementById('plannerBody');
-  for (let h = 0; h < 24; h++) {
-    const row = document.createElement('tr');
-    const th = document.createElement('th'); th.textContent = `${String(h).padStart(2,'0')}시`; row.appendChild(th);
-    for (let i = 0; i < 12; i++) {
-      const td = document.createElement('td');
-      td.dataset.time = `${String(h).padStart(2,'0')}:${String(i*5).padStart(2,'0')}`;
-      td.addEventListener('mousedown', onMouseDown);
-      td.addEventListener('mouseover', onMouseOver);
-      td.addEventListener('mouseup', onMouseUp);
-      row.appendChild(td);
+    function generateTable() {
+      const tbody = document.getElementById('plannerBody');
+      tbody.innerHTML = '';
+      for (let h = 0; h < 24; h++) {
+        const row = document.createElement('tr');
+        const th = document.createElement('th');
+        th.textContent = `${String(h).padStart(2,'0')}시`;
+        row.appendChild(th);
+        for (let i = 0; i < 12; i++) {
+          const td = document.createElement('td');
+          td.dataset.time = `${String(h).padStart(2,'0')}:${String(i*5).padStart(2,'0')}`;
+          td.addEventListener('mousedown', onMouseDown);
+          td.addEventListener('mouseover', onMouseOver);
+          td.addEventListener('mouseup', onMouseUp);
+          row.appendChild(td);
+        }
+        tbody.appendChild(row);
+      }
     }
-    tbody.appendChild(row);
-  }
-}
 
-function onMouseDown(e) {
-  const cell = e.currentTarget;
-  const all = Array.from(document.querySelectorAll('td'));
-  const defaultBg = 'rgb(236, 253, 245)';
-  const cellBg = window.getComputedStyle(cell).backgroundColor;
-  if (cellBg !== defaultBg) {
-    let idx = all.indexOf(cell);
-    while (idx > 0 && window.getComputedStyle(all[idx-1]).backgroundColor === cellBg) idx--;
-    const block = [all[idx]];
-    for (let i = idx + 1; i < all.length; i++) {
-      if (window.getComputedStyle(all[i]).backgroundColor === cellBg) block.push(all[i]);
-      else break;
+    function onMouseDown(e) {
+      isDragging = true;
+      startCell = e.currentTarget;
+      clearSelection();
+      startCell.classList.add('highlight');
+      selectedCells = [startCell];
+      showPreview(e);
     }
-    selectedCells = block;
-    showModal();
-    return;
-  }
-  isDragging = true;
-  startCell = cell;
-  clearSelection();
-  startCell.classList.add('highlight');
-  selectedCells = [startCell];
-  showPreview(e);
-}
 
-function onMouseOver(e) {
-  if (!isDragging) return;
-  const cell = e.currentTarget;
-  const all = Array.from(document.querySelectorAll('td'));
-  const i1 = all.indexOf(startCell), i2 = all.indexOf(cell);
-  const [min, max] = [Math.min(i1,i2), Math.max(i1,i2)];
-  const cells = all.slice(min, max+1);
-  clearSelection();
-  selectedCells = cells;
-  selectedCells.forEach(c => c.classList.add('highlight'));
-  showPreview(e);
-}
+    function onMouseOver(e) {
+      if (!isDragging) return;
+      const all = Array.from(document.querySelectorAll('td'));
+      const i1 = all.indexOf(startCell);
+      const i2 = all.indexOf(e.currentTarget);
+      const [min, max] = [Math.min(i1,i2), Math.max(i1,i2)];
+      clearSelection();
+      selectedCells = all.slice(min, max+1);
+      selectedCells.forEach(c => c.classList.add('highlight'));
+      showPreview(e);
+    }
 
-function onMouseUp(e) {
-  if (!isDragging) return;
-  isDragging = false;
-  timePreview.style.display = 'none';
-  showModal();
-}
+    function onMouseUp(e) {
+      isDragging = false;
+      timePreview.style.display = 'none';
+      showModal();
+    }
 
-function showPreview(e) {
-  const start = selectedCells[0].dataset.time;
-  const mins = selectedCells.length * 5;
-  const end = addMinutes(start, mins);
-  timePreview.textContent = `${start} ~ ${end} (${mins}분)`;
-  timePreview.style.left = `${e.pageX+10}px`;
-  timePreview.style.top = `${e.pageY+10}px`;
-  timePreview.style.display = 'block';
-}
+    function showPreview(e) {
+      const start = selectedCells[0].dataset.time;
+      const mins = selectedCells.length * 5;
+      const end = addMinutes(start, mins);
+      timePreview.textContent = `${start} ~ ${end} (${mins}분)`;
+      timePreview.style.left = `${e.pageX+10}px`;
+      timePreview.style.top = `${e.pageY+10}px`;
+      timePreview.style.display = 'block';
+    }
 
-function addMinutes(time, mins) {
-  const [h,m] = time.split(':').map(Number);
-  const d = new Date(); d.setHours(h, m+mins, 0, 0);
-  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-}
+    function addMinutes(time, mins) {
+      const [h, m] = time.split(':').map(Number);
+      const d = new Date();
+      d.setHours(h, m + mins, 0, 0);
+      return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
 
-function clearSelection() {
-  document.querySelectorAll('td').forEach(td => td.classList.remove('highlight'));
-}
+    function clearSelection() {
+      document.querySelectorAll('td').forEach(td => td.classList.remove('highlight'));
+    }
 
-function showModal() {
-  modal.style.display = 'block';
-  overlay.style.display = 'block';
-  taskText.focus();
-  const title = selectedCells[0].textContent.split('(')[0].trim();
-  taskText.value = title;
-  deleteBtn.style.display = title ? 'inline-block' : 'none';
-}
+    function showModal() {
+      modal.style.display = 'block';
+      overlay.style.display = 'block';
+      taskText.focus();
+      const title = selectedCells[0].textContent.split('(')[0].trim();
+      taskText.value = title;
+      deleteBtn.style.display = title ? 'inline-block' : 'none';
+    }
 
-function closeModal() {
-  modal.style.display = 'none';
-  overlay.style.display = 'none';
-}
+    function closeModal() {
+      modal.style.display = 'none';
+      overlay.style.display = 'none';
+    }
 
-document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+    document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
 
-function applyTask() {
-  const text = taskText.value;
-  const start = selectedCells[0].dataset.time;
-  const mins = selectedCells.length * 5;
-  const end = addMinutes(start, mins);
-  const full = `${text} (${start} ~ ${end} (${mins}분))`;
-  selectedCells.forEach((c,i) => { c.textContent = i===0? full : ''; c.style.backgroundColor = selectedColor; });
-  clearSelection(); selectedCells = [];
-  closeModal();
-}
+    function applyTask() {
+      const text = taskText.value.trim();
+      const start = selectedCells[0].dataset.time;
+      const mins = selectedCells.length * 5;
+      const end = addMinutes(start, mins);
+      const full = `${text} (${start} ~ ${end} (${mins}분))`;
+      selectedCells.forEach((c,i) => {
+        if (i===0) {
+          c.textContent = full;
+          c.style.backgroundColor = selectedColor;
+        } else {
+          c.textContent = '';
+          c.style.backgroundColor = selectedColor;
+        }
+      });
+      clearSelection();
+      selectedCells = [];
+      closeModal();
+    }
 
-function removeTask() {
-  if (!selectedCells.length) return;
-  const all = Array.from(document.querySelectorAll('td'));
-  let idx = all.indexOf(selectedCells[0]);
-  while(idx>0 && all[idx-1].style.backgroundColor === selectedColor) idx--;
-  while(idx<all.length && all[idx].style.backgroundColor === selectedColor) {
-    all[idx].textContent = '';
-    all[idx].style.backgroundColor = '#ecfdf5';
-    idx++;
-  }
-  clearSelection(); selectedCells = [];
-  closeModal();
-}
+    function removeTask() {
+      if (!selectedCells.length) return;
+      const all = Array.from(document.querySelectorAll('td'));
+      const target = selectedCells[0];
+      const blockColor = target.style.backgroundColor;
+      let idx = all.indexOf(target);
+      // find start of block by background color
+      while (idx > 0 && all[idx - 1].style.backgroundColor === blockColor) {
+        idx--;
+      }
+      // clear entire block
+      while (idx < all.length && all[idx].style.backgroundColor === blockColor) {
+        all[idx].textContent = '';
+        all[idx].style.backgroundColor = '#ecfdf5';
+        idx++;
+      }
+      clearSelection();
+      selectedCells = [];
+      closeModal();
+    }
 
-function chooseColor(c) {
-  selectedColor = c;
-  document.getElementById('colorPreview').style.backgroundColor = c;
-}
+    function chooseColor(c) {
+      selectedColor = c;
+      document.getElementById('colorPreview').style.backgroundColor = c;
+    }
 
-function clearAll() {
-  document.querySelectorAll('td').forEach(c => { c.textContent = ''; c.style.backgroundColor = '#ecfdf5'; });
-}
+    function clearAll() {
+      document.querySelectorAll('td').forEach(c => {
+        c.textContent = '';
+        c.style.backgroundColor = '#ecfdf5';
+      });
+    }
 
-document.addEventListener('DOMContentLoaded', () => { generateTable(); chooseColor(selectedColor); });
-</script>
+    document.addEventListener('DOMContentLoaded', () => {
+      generateTable();
+      chooseColor(selectedColor);
+    });
+  </script>
 </body>
 </html>
