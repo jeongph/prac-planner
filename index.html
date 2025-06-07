@@ -87,7 +87,6 @@
       const all = Array.from(document.querySelectorAll('td'));
       const bg = window.getComputedStyle(cell).backgroundColor;
       if (bg !== defaultBg) {
-        // edit existing block
         let idx = all.indexOf(cell);
         while (idx > 0 && window.getComputedStyle(all[idx-1]).backgroundColor === bg) idx--;
         let end = idx; while (end+1 < all.length && window.getComputedStyle(all[end+1]).backgroundColor === bg) end++;
@@ -141,21 +140,63 @@
       deleteBtn.style.display = title ? 'inline-block' : 'none';
     }
 
-    function closeModal() { modal.style.display = 'none'; overlay.style.display = 'none'; }
+    function closeModal() {
+      modal.style.display = 'none';
+      overlay.style.display = 'none';
+      // clear selection on cancel
+      clearSelection();
+      rangeStart = null;
+      selectedCells = [];
+    }
 
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
     function applyTask() {
-      const text = taskText.value.trim();
-      const start = selectedCells[0].dataset.time;
-      const mins = selectedCells.length * 5;
-      const end = addMinutes(start, mins);
-      const full = `${text} (${start} ~ ${end} (${mins}분))`;
-      selectedCells.forEach((c, i) => { c.textContent = i===0 ? full : ''; c.style.backgroundColor = selectedColor; });
-      clearSelection();
-      rangeStart = null;  // reset start for mobile selection
-      selectedCells = [];
-      closeModal();
+      const all = Array.from(document.querySelectorAll('td'));
+      const defaultColor = defaultBg;
+      const newStartIdx = all.indexOf(selectedCells[0]);
+      const newEndIdx = all.indexOf(selectedCells[selectedCells.length - 1]);
+      const newLen = newEndIdx - newStartIdx + 1;
+      const newStartTime = all[newStartIdx].dataset.time;
+      const newEndTime = addMinutes(newStartTime, newLen * 5);
+      const newText = `${taskText.value.trim()} (${newStartTime} ~ ${newEndTime} (${newLen*5}분))`;
+      let i = newStartIdx;
+      while (i <= newEndIdx) {
+        const cell = all[i];
+        const bgColor = window.getComputedStyle(cell).backgroundColor;
+        if (bgColor !== defaultColor) {
+          let bStart = i;
+          while (bStart > 0 && window.getComputedStyle(all[bStart-1]).backgroundColor === bgColor) bStart--;
+          let bEnd = bStart;
+          while (bEnd + 1 < all.length && window.getComputedStyle(all[bEnd+1]).backgroundColor === bgColor) bEnd++;
+          const origText = all[bStart].textContent.split('(')[0].trim();
+          for (let j = bStart; j <= bEnd; j++) {
+            all[j].textContent = '';
+            all[j].style.backgroundColor = defaultColor;
+          }
+          if (bEnd > newEndIdx) {
+            const tailStart = newEndIdx + 1;
+            const tailLen = bEnd - newEndIdx;
+            const tailStartTime = all[tailStart].dataset.time;
+            const tailEndTime = addMinutes(tailStartTime, tailLen*5);
+            const tailText = `${origText} (${tailStartTime} ~ ${tailEndTime} (${tailLen*5}분))`;
+            all[tailStart].textContent = tailText;
+            all[tailStart].style.backgroundColor = bgColor;
+            for (let k = tailStart+1; k <= bEnd; k++) {
+              all[k].textContent = '';
+              all[k].style.backgroundColor = bgColor;
+            }
+          }
+          i = bEnd + 1;
+          continue;
+        }
+        i++;
+      }
+      for (let j = newStartIdx; j <= newEndIdx; j++) {
+        all[j].textContent = j === newStartIdx ? newText : '';
+        all[j].style.backgroundColor = selectedColor;
+      }
+      clearSelection(); rangeStart = null; selectedCells = []; closeModal();
     }
 
     function removeTask() {
