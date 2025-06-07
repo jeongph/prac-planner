@@ -92,8 +92,27 @@
     }
 
     function onMouseDown(e) {
+      const cell = e.currentTarget;
+      const defaultBg = 'rgb(236, 253, 245)'; // #ecfdf5
+      const cellBg = window.getComputedStyle(cell).backgroundColor;
+      if (cellBg !== defaultBg) {
+        // Edit or delete existing block when any cell is clicked
+        const all = Array.from(document.querySelectorAll('td'));
+        let idx = all.indexOf(cell);
+        // find block start
+        while (idx > 0 && window.getComputedStyle(all[idx - 1]).backgroundColor === cellBg) idx--;
+        // find block end
+        let endIdx = idx;
+        while (endIdx + 1 < all.length && window.getComputedStyle(all[endIdx + 1]).backgroundColor === cellBg) endIdx++;
+        selectedCells = all.slice(idx, endIdx + 1);
+        clearSelection();
+        selectedCells.forEach(c => c.classList.add('highlight'));
+        showModal();
+        return;
+      }
+      // New selection
       isDragging = true;
-      startCell = e.currentTarget;
+      startCell = cell;
       clearSelection();
       startCell.classList.add('highlight');
       selectedCells = [startCell];
